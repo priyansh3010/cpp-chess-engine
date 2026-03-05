@@ -62,7 +62,7 @@ namespace {
         while (doublePush) {
             int toSquare = getLSB(doublePush);
             int fromSquare = toSquare - 16;
-            Move move(fromSquare, toSquare, PAWN);
+            Move move(fromSquare, toSquare, PAWN, NONE, NONE, false, true);
             moveList.push_back(move); // add to move list
 
             doublePush &= doublePush - 1; // move onto next least significant bit
@@ -71,14 +71,12 @@ namespace {
         return moveList;
     }
     vector<Move> wPawnCapture(const Board& board) {
-        U64 maskHFile = 0x8080808080808080ULL; // mask H file
-        U64 maskAFile = 0x0101010101010101ULL; // mask A file
         U64 mask7Rank = 0x00FF000000000000ULL; // mask 7th rank
-        U64 leftCaptures  = ((board.pieces[WHITE][PAWN] & ~mask7Rank) << 7) & board.occupancy[BLACK] & ~maskHFile;
-        U64 rightCaptures = ((board.pieces[WHITE][PAWN] & ~mask7Rank) << 9) & board.occupancy[BLACK] & ~maskAFile;
+        U64 leftCaptures  = ((board.pieces[WHITE][PAWN] & ~mask7Rank) << 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
+        U64 rightCaptures = ((board.pieces[WHITE][PAWN] & ~mask7Rank) << 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
         U64 rank7Pawns = board.pieces[WHITE][PAWN] & mask7Rank;
-        U64 leftPromoCaptures = (rank7Pawns << 7) & board.occupancy[BLACK] & ~maskHFile;
-        U64 rightPromoCaptures = (rank7Pawns << 9) & board.occupancy[BLACK] & ~maskAFile;
+        U64 leftPromoCaptures = (rank7Pawns << 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
+        U64 rightPromoCaptures = (rank7Pawns << 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
 
         vector<Move> moveList;
 
@@ -140,6 +138,19 @@ namespace {
             moveList.push_back(move);
 
             rightPromoCaptures &= rightPromoCaptures - 1; // move onto next least significant bit
+        }
+
+        // check for en passant moves
+        if (board.enPassantSquare != -1) {   
+            if ((board.pieces[WHITE][PAWN] & ~MASK_H_FILE) << 7 & (1ULL << board.enPassantSquare)) {
+                Move move(board.enPassantSquare - 7, board.enPassantSquare, PAWN, PAWN);
+                moveList.push_back(move);
+            }
+            
+            if ((board.pieces[WHITE][PAWN] & ~MASK_A_FILE) << 9 & (1ULL << board.enPassantSquare)) {
+                Move move(board.enPassantSquare - 9, board.enPassantSquare, PAWN, PAWN);
+                moveList.push_back(move);
+            }
         }
 
         return moveList;
@@ -196,7 +207,7 @@ namespace {
         while (doublePush) {
             int toSquare = getLSB(doublePush);
             int fromSquare = toSquare + 16;
-            Move move(fromSquare, toSquare, PAWN);
+            Move move(fromSquare, toSquare, PAWN, NONE, NONE, false, true);
             moveList.push_back(move); // add to move list
 
             doublePush &= doublePush - 1; // move onto next least significant bit
@@ -205,14 +216,12 @@ namespace {
         return moveList;
     }
     vector<Move> bPawnCapture(const Board& board) {
-        U64 maskHFile = 0x8080808080808080ULL; // mask H file
-        U64 maskAFile = 0x0101010101010101ULL; // mask A file
         U64 mask2Rank = 0x00000000000000FF00ULL; // mask 7th rank
-        U64 leftCaptures  = ((board.pieces[WHITE][PAWN] & ~mask2Rank) >> 7) & board.occupancy[BLACK] & ~maskHFile;
-        U64 rightCaptures = ((board.pieces[WHITE][PAWN] & ~mask2Rank) >> 9) & board.occupancy[BLACK] & ~maskAFile;
+        U64 leftCaptures  = ((board.pieces[WHITE][PAWN] & ~mask2Rank) >> 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
+        U64 rightCaptures = ((board.pieces[WHITE][PAWN] & ~mask2Rank) >> 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
         U64 rank2Pawns = board.pieces[WHITE][PAWN] & mask2Rank;
-        U64 leftPromoCaptures = (rank2Pawns >> 7) & board.occupancy[BLACK] & ~maskHFile;
-        U64 rightPromoCaptures = (rank2Pawns >> 9) & board.occupancy[BLACK] & ~maskAFile;
+        U64 leftPromoCaptures = (rank2Pawns >> 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
+        U64 rightPromoCaptures = (rank2Pawns >> 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
 
         vector<Move> moveList;
 
@@ -276,6 +285,19 @@ namespace {
             rightPromoCaptures &= rightPromoCaptures - 1; // move onto next least significant bit
         }
 
+        // check for en passant moves
+        if (board.enPassantSquare != -1) {   
+            if ((board.pieces[WHITE][PAWN] & ~MASK_H_FILE) >> 7 & (1ULL << board.enPassantSquare)) {
+                Move move(board.enPassantSquare + 7, board.enPassantSquare, PAWN, PAWN);
+                moveList.push_back(move);
+            }
+            
+            if ((board.pieces[WHITE][PAWN] & ~MASK_A_FILE) >> 9 & (1ULL << board.enPassantSquare)) {
+                Move move(board.enPassantSquare + 9, board.enPassantSquare, PAWN, PAWN);
+                moveList.push_back(move);
+            }
+        }
+
         return moveList;
     }
     vector<Move> generatePawnMoves(const Board& board) {
@@ -303,8 +325,6 @@ namespace {
             return pawn1;
         }
     }
-
-
 }
 
 namespace MoveGen {
