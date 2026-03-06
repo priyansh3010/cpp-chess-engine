@@ -667,53 +667,97 @@ namespace {
 
         int fromSquare = getLSB(kingMask);
 
+        vector<Move> moveList;
         // north west
         if (((kingMask << 9) & ~MASK_A_FILE) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare + 9;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
         }
         // north
         if ((kingMask << 8) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare + 8;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
         }
         // north east
         if (((kingMask << 7) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare + 7;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
         }
         // east
         if (((kingMask >> 1) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare - 1;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
         }
         // south east
         if (((kingMask >> 9) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare - 9;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
         }
         // south
         if ((kingMask >> 8) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare - 8;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
         }
         // south west
         if (((kingMask >> 7) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare - 7;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
         }
         // west
         if (((kingMask << 1) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare + 1;
             Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
+            moveList.push_back(move);
+        }
+
+        // white castling
+        if (board.sideToMove == WHITE) {
+            // queenside castling
+            if (board.castlingRights & 0b1000) {
+                if (~board.occupancy[ALL] & 0x000000000000000C) {
+                    Move move(fromSquare, fromSquare - 2, KING, NONE, NONE, true);
+                    moveList.push_back(move);
+                }
+            }
+            // kingside castling
+            if (board.castlingRights & 0b0100) {
+                if (~board.occupancy[ALL] & 0x0000000000000060) {
+                    Move move(fromSquare, fromSquare + 2, KING, NONE, NONE, true);
+                    moveList.push_back(move);
+                }
+            }
+        }
+        // black castling
+        else {
+            // queenside castling
+            if (board.castlingRights & 0b0010) {
+                if (~board.occupancy[ALL] & 0x0C00000000000000) {
+                    Move move(fromSquare, fromSquare - 2, KING, NONE, NONE, true);
+                    moveList.push_back(move);
+                }
+            }
+            // kingside castling
+            if (board.castlingRights & 0b0001) {
+                if (~board.occupancy[ALL] & 0x6000000000000000) {
+                    Move move(fromSquare, fromSquare + 2, KING, NONE, NONE, true);
+                    moveList.push_back(move);
+                }
+            }
         }
     }
 }
