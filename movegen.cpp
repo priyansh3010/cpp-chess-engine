@@ -11,6 +11,7 @@ using namespace std;
 namespace {
     U64 knightAttacks[64];
     // pre-compute knight moves
+    // direction is based on the orientation of bitboards defined in comments in types.h
     void preComputeKnightMoves() {
         for (int i = 0; i < 64; i++) {
             U64 currIndex = 1ULL << i;
@@ -299,6 +300,136 @@ namespace {
             }
         }
 
+        return moveList;
+    }
+    // diagonal sliding move functions
+    // direction is based on the orientation of bitboards defined in comments in types.h
+    vector<Move> northWestSliding(const Board& board, Piece piece) {
+        U64 pieces = board.pieces[board.sideToMove][piece];
+
+        // loop through each of the pieces on bitboard
+        vector<Move> moveList;
+        while (pieces) {
+            int fromSquare = getLSB(pieces);
+
+            U64 currPieceMask = 1ULL << fromSquare;
+
+            // Loop north west 
+            while (((currPieceMask << 9) & ~MASK_A_FILE) & ~board.occupancy[board.sideToMove]) {
+                int toSquare = fromSquare - 9;
+                if (currPieceMask & board.occupancy[board.sideToMove == WHITE ? BLACK : WHITE]) {
+                    Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
+                    Move move(fromSquare, toSquare, piece, captured);
+                    moveList.push_back(move);
+                    break; // stop generating moves once opponent piece reached
+                }
+                else {
+                    Move move(fromSquare, toSquare, piece);
+                    moveList.push_back(move);
+                }
+                
+                currPieceMask <<= 9;
+            }
+
+            pieces &= pieces - 1;
+        }
+
+        return moveList;
+    }
+    vector<Move> northEastSliding(const Board& board, Piece piece) {
+        U64 pieces = board.pieces[board.sideToMove][piece];
+
+        // loop through each of the pieces on bitboard
+        vector<Move> moveList;
+        while (pieces) {
+            int fromSquare = getLSB(pieces);
+
+            U64 currPieceMask = 1ULL << fromSquare;
+
+            // Loop north east 
+            while (((currPieceMask << 7) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
+                int toSquare = fromSquare - 7;
+                if (currPieceMask & board.occupancy[board.sideToMove == WHITE ? BLACK : WHITE]) {
+                    Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
+                    Move move(fromSquare, toSquare, piece, captured);
+                    moveList.push_back(move);
+                    break; // stop generating moves once opponent piece reached
+                }
+                else {
+                    Move move(fromSquare, toSquare, piece);
+                    moveList.push_back(move);
+                }
+                
+                currPieceMask <<= 7;
+            }
+
+            pieces &= pieces - 1;
+        }
+        
+        return moveList;
+    }
+    vector<Move> southEastSliding(const Board& board, Piece piece) {
+        U64 pieces = board.pieces[board.sideToMove][piece];
+
+        // loop through each of the pieces on bitboard
+        vector<Move> moveList;
+        while (pieces) {
+            int fromSquare = getLSB(pieces);
+
+            U64 currPieceMask = 1ULL << fromSquare;
+
+            // Loop south east 
+            while (((currPieceMask >> 7) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
+                int toSquare = fromSquare + 7;
+                if (currPieceMask & board.occupancy[board.sideToMove == WHITE ? BLACK : WHITE]) {
+                    Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
+                    Move move(fromSquare, toSquare, piece, captured);
+                    moveList.push_back(move);
+                    break; // stop generating moves once opponent piece reached
+                }
+                else {
+                    Move move(fromSquare, toSquare, piece);
+                    moveList.push_back(move);
+                }
+                
+                currPieceMask >>= 7;
+            }
+
+            pieces &= pieces - 1;
+        }
+        
+        return moveList;
+    }
+    vector<Move> southWestSliding(const Board& board, Piece piece) {
+        U64 pieces = board.pieces[board.sideToMove][piece];
+
+        // loop through each of the pieces on bitboard
+        vector<Move> moveList;
+        while (pieces) {
+            int fromSquare = getLSB(pieces);
+
+            U64 currPieceMask = 1ULL << fromSquare;
+
+            // Loop south west 
+            while (((currPieceMask >> 9) & ~MASK_H_FILE) & ~board.occupancy[board.sideToMove]) {
+                int toSquare = fromSquare + 9;
+                if (currPieceMask & board.occupancy[board.sideToMove == WHITE ? BLACK : WHITE]) {
+                    Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
+                    Move move(fromSquare, toSquare, piece, captured);
+                    moveList.push_back(move);
+                    break; // stop generating moves once opponent piece reached
+                }
+                else {
+                    Move move(fromSquare, toSquare, piece);
+                    moveList.push_back(move);
+                }
+                
+                currPieceMask <<= 7;
+            }
+
+            pieces &= pieces - 1;
+        }
+        
         return moveList;
     }
     vector<Move> generatePawnMoves(const Board& board) {
