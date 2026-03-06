@@ -33,7 +33,7 @@ void Board::init() {
     occupancy[ALL] = occupancy[BLACK] | occupancy[WHITE];
 
     // initialising other variables
-    sideToMove = BLACK;
+    sideToMove = WHITE;
     castlingRights = 0b1111; // first 2 bits for white castling, last 2 for black castling
     enPassantSquare = -1;
     halfMoveClock = 0;
@@ -70,7 +70,7 @@ void Board::printBoard() {
 
 Piece Board::getPieceAt(Color color, int square) const {
     U64 mask = 1ULL << square;
-    for (int pt = PAWN; pt <= KING; pt++) {
+    for (int pt = KING; pt <= PAWN; pt++) {
         if (pieces[color][pt] & mask)
             return static_cast<Piece>(pt);
     }
