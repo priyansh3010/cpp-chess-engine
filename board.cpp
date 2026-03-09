@@ -5,6 +5,18 @@
 #include "moveinfo.h"
 using namespace std;
 
+namespace {
+    void updateOccupancyBoards(Board& board) {
+        board.occupancy[WHITE] = board.pieces[WHITE][ROOK] | board.pieces[WHITE][KNIGHT]
+                                | board.pieces[WHITE][BISHOP] | board.pieces[WHITE][KING]
+                                | board.pieces[WHITE][QUEEN] | board.pieces[WHITE][PAWN];
+
+        board.occupancy[BLACK] = board.pieces[BLACK][ROOK] | board.pieces[BLACK][KNIGHT]
+                                | board.pieces[BLACK][BISHOP] | board.pieces[BLACK][KING]
+                                | board.pieces[BLACK][QUEEN] | board.pieces[BLACK][PAWN];
+    }
+}
+
 void Board::init() {
     // Setting white pieces
     pieces[WHITE][ROOK] = (1ULL << a1) | (1ULL << h1);
@@ -167,5 +179,6 @@ MoveInfo Board::makeMove(Move move) {
     // fullMove update
     if (sideToMove == BLACK) fullMoveNumber++;
 
+    updateOccupancyBoards(*this);
     return moveInfo;
 }
