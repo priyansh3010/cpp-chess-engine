@@ -161,15 +161,11 @@ MoveInfo Board::makeMove(Move move) {
             // move rook to correct spot
             pieces[sideToMove][ROOK] ^= (1ULL << move.fromSquare + 3);
             pieces[sideToMove][ROOK] ^= (1ULL << move.fromSquare + 1);
-            if (sideToMove == WHITE) castlingRights ^= 0b1000;
-            if (sideToMove == BLACK) castlingRights ^= 0b0010;
         }
         else {
             // move rook to correct spot
             pieces[sideToMove][ROOK] ^= (1ULL << move.fromSquare - 4);
             pieces[sideToMove][ROOK] ^= (1ULL << move.fromSquare - 1);
-            if (sideToMove == WHITE) castlingRights ^= 0b0100;
-            if (sideToMove == BLACK) castlingRights ^= 0b0001;
         }
         // move king to correct spot
         pieces[sideToMove][KING] ^= (1ULL << move.fromSquare);
