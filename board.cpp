@@ -2,6 +2,7 @@
 #include <cmath>
 #include "board.h"
 #include "move.h"
+#include "movegen.h"
 #include "moveinfo.h"
 using namespace std;
 
@@ -55,6 +56,9 @@ void Board::init() {
     enPassantSquare = -1;
     halfMoveClock = 0;
     fullMoveNumber = 1;
+
+    // pre-compute knight moves
+    MoveGen::init();
 }
 
 void Board::printBoard() {
@@ -241,3 +245,14 @@ void Board::unMakeMove(MoveInfo moveInfo) {
     // update all occupancy boards
     updateOccupancyBoards(*this);
 }
+
+bool Board::isKingInCheck() {
+    int kingIndex = getLSB(pieces[sideToMove == WHITE ? BLACK : WHITE][KING]);
+    vector<Move> allMoves = MoveGen::generateAllMoves(*this);
+
+    for (Move move : allMoves) {
+        if (move.toSquare == kingIndex) return true;
+    }
+
+    return false;
+} 
