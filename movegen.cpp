@@ -3,8 +3,9 @@
 #include <string>
 #include <vector>
 #include "board.h"
-#include "movegen.h"
 #include "move.h"
+#include "moveinfo.h"
+#include "movegen.h"
 #include "types.h"
 using namespace std;
 
@@ -31,7 +32,7 @@ namespace {
         }
     }
     // Pawn move functions
-    vector<Move> wPawnSinglePush(const Board& board) {
+    void wPawnSinglePush(const Board& board, vector<Move>& moveList) {
         U64 emptySquares = ~board.occupancy[ALL];
         U64 rank7Mask = 0x00FF000000000000ULL; // Will highlight all pawns on 7th rank
 
@@ -39,8 +40,6 @@ namespace {
         
         U64 rank7Pawns = board.pieces[WHITE][PAWN] & rank7Mask; // all squares 7th rank white pawns can move to
         U64 promoPawns = (rank7Pawns << 8) & emptySquares;
-        
-        vector<Move> moveList;
         
         // Find all 1 bits to generate single push moves
         while (singlePush) {
@@ -65,16 +64,12 @@ namespace {
             
             promoPawns &= promoPawns - 1;
         }
-        
-        return moveList;
     }
-    vector<Move> wPawnDoublePush(const Board& board) {
+    void wPawnDoublePush(const Board& board, vector<Move>& moveList) {
         U64 emptySquares = ~board.occupancy[ALL];
         U64 rank2Pawns = board.pieces[WHITE][PAWN] & 0x000000000000FF00ULL;
         U64 singlePush = (rank2Pawns << 8) & emptySquares;      // intermediate square must be empty
         U64 doublePush = (singlePush << 8) & emptySquares;       // destination must also be empty
-
-        vector<Move> moveList;
 
         // Find all 1 bits to generate moves
         while (doublePush) {
@@ -85,18 +80,14 @@ namespace {
 
             doublePush &= doublePush - 1; // move onto next least significant bit
         }
-
-        return moveList;
     }
-    vector<Move> wPawnCapture(const Board& board) {
+    void wPawnCapture(const Board& board, vector<Move>& moveList) {
         U64 mask7Rank = 0x00FF000000000000ULL; // mask 7th rank
         U64 leftCaptures  = ((board.pieces[WHITE][PAWN] & ~mask7Rank) << 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
         U64 rightCaptures = ((board.pieces[WHITE][PAWN] & ~mask7Rank) << 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
         U64 rank7Pawns = board.pieces[WHITE][PAWN] & mask7Rank;
         U64 leftPromoCaptures = (rank7Pawns << 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
         U64 rightPromoCaptures = (rank7Pawns << 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
-
-        vector<Move> moveList;
 
         // Check left captures
         while (leftCaptures) {
@@ -164,10 +155,8 @@ namespace {
                 moveList.push_back(move);
             }
         }
-
-        return moveList;
     }
-    vector<Move> bPawnSinglePush(const Board& board) {
+    void bPawnSinglePush(const Board& board, vector<Move>& moveList) {
         U64 emptySquares = ~board.occupancy[ALL];
         U64 rank2Mask = 0x000000000000FF00ULL; // Will highlight all pawns below 2nd rank
 
@@ -175,8 +164,6 @@ namespace {
         
         U64 rank2Pawns = board.pieces[BLACK][PAWN] & rank2Mask; // all squares 2nd rank white pawns can move to
         U64 promoPawns = (rank2Pawns >> 8) & emptySquares;
-
-        vector<Move> moveList;
 
         // Find all 1 bits to generate single push moves
         while (singlePush) {
@@ -200,16 +187,12 @@ namespace {
 
             promoPawns &= promoPawns - 1;
         }
-
-        return moveList;
     }
-    vector<Move> bPawnDoublePush(const Board& board) {
+    void bPawnDoublePush(const Board& board, vector<Move>& moveList) {
         U64 emptySquares = ~board.occupancy[ALL];
         U64 rank7Pawns = board.pieces[BLACK][PAWN] & 0x00FF000000000000ULL;
         U64 singlePush = (rank7Pawns >> 8) & emptySquares;      // intermediate square must be empty
         U64 doublePush = (singlePush >> 8) & emptySquares;       // destination must also be empty
-
-        vector<Move> moveList;
 
         // Find all 1 bits to generate moves
         while (doublePush) {
@@ -220,18 +203,14 @@ namespace {
 
             doublePush &= doublePush - 1; // move onto next least significant bit
         }
-
-        return moveList;
     }
-    vector<Move> bPawnCapture(const Board& board) {
+    void bPawnCapture(const Board& board, vector<Move>& moveList) {
         U64 mask2Rank = 0x00000000000000FF00ULL; // mask 7th rank
         U64 leftCaptures  = ((board.pieces[WHITE][PAWN] & ~mask2Rank) >> 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
         U64 rightCaptures = ((board.pieces[WHITE][PAWN] & ~mask2Rank) >> 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
         U64 rank2Pawns = board.pieces[WHITE][PAWN] & mask2Rank;
         U64 leftPromoCaptures = (rank2Pawns >> 7) & board.occupancy[BLACK] & ~MASK_H_FILE;
         U64 rightPromoCaptures = (rank2Pawns >> 9) & board.occupancy[BLACK] & ~MASK_A_FILE;
-
-        vector<Move> moveList;
 
         // Check left captures
         while (leftCaptures) {
@@ -299,16 +278,13 @@ namespace {
                 moveList.push_back(move);
             }
         }
-
-        return moveList;
     }
     // diagonal sliding move functions
     // direction is based on the orientation of bitboards defined in comments in types.h
-    vector<Move> northWestSliding(const Board& board, Piece piece) {
+    void northWestSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -333,14 +309,11 @@ namespace {
 
             pieces &= pieces - 1;
         }
-
-        return moveList;
     }
-    vector<Move> northEastSliding(const Board& board, Piece piece) {
+    void northEastSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -365,14 +338,11 @@ namespace {
 
             pieces &= pieces - 1;
         }
-        
-        return moveList;
     }
-    vector<Move> southEastSliding(const Board& board, Piece piece) {
+    void southEastSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -397,14 +367,11 @@ namespace {
 
             pieces &= pieces - 1;
         }
-        
-        return moveList;
     }
-    vector<Move> southWestSliding(const Board& board, Piece piece) {
+    void southWestSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -429,16 +396,13 @@ namespace {
 
             pieces &= pieces - 1;
         }
-        
-        return moveList;
     }
     // straight sliding move functions
     // direction is based on the orientation of bitboards defined in comments in types.h
-    vector<Move> northSliding(const Board& board, Piece piece) {
+    void northSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -463,14 +427,11 @@ namespace {
 
             pieces &= pieces - 1;
         }
-
-        return moveList;
     }
-    vector<Move> eastSliding(const Board& board, Piece piece) {
+    void eastSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -495,14 +456,11 @@ namespace {
 
             pieces &= pieces - 1;
         }
-
-        return moveList;
     }
-    vector<Move> southSliding(const Board& board, Piece piece) {
+    void southSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -527,14 +485,11 @@ namespace {
 
             pieces &= pieces - 1;
         }
-
-        return moveList;
     }
-    vector<Move> westSliding(const Board& board, Piece piece) {
+    void westSliding(const Board& board, Piece piece, vector<Move>& moveList) {
         U64 pieces = board.pieces[board.sideToMove][piece];
 
         // loop through each of the pieces on bitboard
-        vector<Move> moveList;
         while (pieces) {
             int fromSquare = getLSB(pieces);
 
@@ -559,75 +514,40 @@ namespace {
 
             pieces &= pieces - 1;
         }
-
-        return moveList;
     }
     // individual move type functions, calling above defined functions
-    vector<Move> generateDiagonalSlidingMoves(const Board& board, Piece piece) {
+    void generateDiagonalSlidingMoves(const Board& board, Piece piece, vector<Move>& moveList) {
         // generate all diagonal moves
-        vector<Move> diagonalSlidingMoves1 = northWestSliding(board, piece); 
-        vector<Move> diagonalSlidingMoves2 = northEastSliding(board, piece);
-        vector<Move> diagonalSlidingMoves3 = southEastSliding(board, piece);
-        vector<Move> diagonalSlidingMoves4 = southWestSliding(board, piece);
-
-        diagonalSlidingMoves1.reserve(diagonalSlidingMoves1.size() + diagonalSlidingMoves2.size()
-                                    + diagonalSlidingMoves3.size() + diagonalSlidingMoves4.size());
-
-        // merge all into one vector
-        diagonalSlidingMoves1.insert(end(diagonalSlidingMoves1), begin(diagonalSlidingMoves2), end(diagonalSlidingMoves2));  
-        diagonalSlidingMoves1.insert(end(diagonalSlidingMoves1), begin(diagonalSlidingMoves3), end(diagonalSlidingMoves3));
-        diagonalSlidingMoves1.insert(end(diagonalSlidingMoves1), begin(diagonalSlidingMoves4), end(diagonalSlidingMoves4));
-        
-        return diagonalSlidingMoves1;
+        northWestSliding(board, piece, moveList); 
+        northEastSliding(board, piece, moveList);
+        southEastSliding(board, piece, moveList);
+        southWestSliding(board, piece, moveList);
     }
-    vector<Move> generateStraightSlidingMoves(const Board& board, Piece piece) {
+    void generateStraightSlidingMoves(const Board& board, Piece piece, vector<Move>& moveList) {
         // generate all diagonal moves
-        vector<Move> straightSlidingMoves1 = northSliding(board, piece); 
-        vector<Move> straightSlidingMoves2 = eastSliding(board, piece);
-        vector<Move> straightSlidingMoves3 = southSliding(board, piece);
-        vector<Move> straightSlidingMoves4 = westSliding(board, piece);
-
-        straightSlidingMoves1.reserve(straightSlidingMoves1.size() + straightSlidingMoves2.size()
-                                    + straightSlidingMoves3.size() + straightSlidingMoves4.size());
-
-        // merge all into one vector
-        straightSlidingMoves1.insert(end(straightSlidingMoves1), begin(straightSlidingMoves2), end(straightSlidingMoves2));  
-        straightSlidingMoves1.insert(end(straightSlidingMoves1), begin(straightSlidingMoves3), end(straightSlidingMoves3));
-        straightSlidingMoves1.insert(end(straightSlidingMoves1), begin(straightSlidingMoves4), end(straightSlidingMoves4));
-        
-        return straightSlidingMoves1;
+        northSliding(board, piece, moveList); 
+        eastSliding(board, piece, moveList);
+        southSliding(board, piece, moveList);
+        westSliding(board, piece, moveList);
     }
     // move generation function for each individual type of piece
-    vector<Move> generatePawnMoves(const Board& board) {
+    void generatePawnMoves(const Board& board, vector<Move>& moveList) {
 
         if (board.sideToMove == WHITE) {
-            vector<Move> pawn1 = wPawnSinglePush(board); 
-            vector<Move> pawn2 = wPawnDoublePush(board);
-            vector<Move> pawn3 = wPawnCapture(board);
-            
-            pawn1.reserve(pawn1.size() + pawn2.size() + pawn3.size()); 
-            pawn1.insert(end(pawn1), begin(pawn2), end(pawn2));  
-            pawn1.insert(end(pawn1), begin(pawn3), end(pawn3));
-            
-            return pawn1;
+            wPawnSinglePush(board, moveList); 
+            wPawnDoublePush(board, moveList);
+            wPawnCapture(board, moveList);
         }
         else {
-            vector<Move> pawn1 = bPawnSinglePush(board);
-            vector<Move> pawn2 = bPawnDoublePush(board); 
-            vector<Move> pawn3 = bPawnCapture(board);  
-            
-            pawn1.reserve(pawn1.size() + pawn2.size() + pawn3.size());  
-            pawn1.insert(end(pawn1), begin(pawn2), end(pawn2)); 
-            pawn1.insert(end(pawn1), begin(pawn3), end(pawn3)); 
-            
-            return pawn1;
+            bPawnSinglePush(board, moveList);
+            bPawnDoublePush(board, moveList); 
+            bPawnCapture(board, moveList);  
         }
     }
-    vector<Move> generateKnightMoves(const Board& board) {
+    void generateKnightMoves(const Board& board, vector<Move>& moveList) {
         U64 knights = board.pieces[WHITE][KNIGHT];
 
         // Go through all the players knights
-        vector<Move> moveList;
         while (knights) {
             int fromSquare = getLSB(knights);
             
@@ -644,30 +564,22 @@ namespace {
 
             knights &= knights - 1;
         }
-
-        return moveList;
     }
-    vector<Move> generateBishopMoves(const Board& board) {
-        return generateDiagonalSlidingMoves(board, BISHOP);
+    void generateBishopMoves(const Board& board, vector<Move>& moveList) {
+        generateDiagonalSlidingMoves(board, BISHOP, moveList);
     }
-    vector<Move> generateRookMoves(const Board& board) {
-        return generateStraightSlidingMoves(board, ROOK);
+    void generateRookMoves(const Board& board, vector<Move>& moveList) {
+        generateStraightSlidingMoves(board, ROOK, moveList);
     }
-    vector<Move> generateQueenMoves(const Board& board) {
-        vector<Move> diagonalSlidingMoves = generateDiagonalSlidingMoves(board, QUEEN);
-        vector<Move> straightSlidingMoves = generateStraightSlidingMoves(board, QUEEN);
-
-        diagonalSlidingMoves.reserve(diagonalSlidingMoves.size() + straightSlidingMoves.size());
-        diagonalSlidingMoves.insert(end(diagonalSlidingMoves), begin(straightSlidingMoves), end(straightSlidingMoves)); 
-
-        return diagonalSlidingMoves;
+    void generateQueenMoves(const Board& board, vector<Move>& moveList) {
+        generateDiagonalSlidingMoves(board, QUEEN, moveList);
+        generateStraightSlidingMoves(board, QUEEN, moveList);
     }
-    vector<Move> generateKingMoves(const Board& board) {
+    void generateKingMoves(const Board& board, vector<Move>& moveList) {
         U64 kingMask = board.pieces[board.sideToMove][KING];
 
         int fromSquare = getLSB(kingMask);
 
-        vector<Move> moveList;
         // north west
         if (((kingMask << 9) & ~MASK_A_FILE) & ~board.occupancy[board.sideToMove]) {
             int toSquare = fromSquare + 9;
@@ -764,12 +676,34 @@ namespace {
 
 namespace MoveGen {
 
-    void init() {
+    void MoveGen::init() {
         preComputeKnightMoves();
     }
 
-    vector<Move> MoveGen::generateLegalMoves(const Board& board) {
-        vector<Move> moves = generateKnightMoves(board);
-        return moves;
+    vector<Move> generateAllMoves(Board& board) {
+        vector<Move> moveList;
+        moveList.reserve(255);
+        generatePawnMoves(board, moveList);
+        generateKnightMoves(board, moveList);
+        generateBishopMoves(board, moveList);
+        generateRookMoves(board, moveList);
+        generateQueenMoves(board, moveList);
+        generateKingMoves(board, moveList);
+
+        return moveList;
+    }
+
+    vector<Move> generateLegalMoves(Board& board) {
+        vector<Move> moves = generateAllMoves(board);
+
+        vector<Move> legalMoves;
+        legalMoves.reserve(moves.size());
+        for (Move move : moves) {
+            MoveInfo moveInfo = board.makeMove(move);
+            if (!board.isKingInCheck()) legalMoves.push_back(move);
+            board.unMakeMove(moveInfo);    
+        }
+
+        return legalMoves;
     }
 }

@@ -9,5 +9,6 @@ using namespace std;
 namespace MoveGen {
 
     void init();
-    vector<Move> generateLegalMoves(const Board& board);
+    vector<Move> generateAllMoves(Board& board);
+    vector<Move> generateLegalMoves(Board& board);
 }
