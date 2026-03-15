@@ -52,10 +52,10 @@ namespace {
             U64 south = (currIndex >> 8);
             U64 southWest = (currIndex >> 7) & ~MASK_A_FILE;
             
-            U64 currMoveMap = northWestWest | northNorthWest | northNorthEast | northEastEast
-                            | southWestWest | southSouthWest | southSouthEast | southEastEast;
+            U64 currMoveMap = west | northWest | north | northEast
+                            | east | southEast | south | southWest;
             
-            knightAttacks[i] = currMoveMap;
+            kingAttacks[i] = currMoveMap;
         }
     }
 }
