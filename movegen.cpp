@@ -32,6 +32,27 @@ namespace {
             U64 southWestWest = (currIndex >> 10) & ~MASK_G_H_FILE;
             
             U64 currMoveMap = northWestWest | northNorthWest | northNorthEast | northEastEast
+            | southWestWest | southSouthWest | southSouthEast | southEastEast;
+            
+            knightAttacks[i] = currMoveMap;
+        }
+    }
+    
+    // pre-compute knight moves
+    // direction is based on the orientation of bitboards defined in comments in types.h
+    void preComputeKingMoves() {
+        for (int i = 0; i < 64; i++) {
+            U64 currIndex = 1ULL << i;
+            U64 west = (currIndex << 1) & ~MASK_A_FILE;
+            U64 northWest = (currIndex << 9) & ~MASK_A_FILE;
+            U64 north = (currIndex << 8);
+            U64 northEast = (currIndex << 7) & ~MASK_H_FILE;
+            U64 east = (currIndex >> 1) & ~MASK_H_FILE;
+            U64 southEast = (currIndex >> 9) & ~MASK_H_FILE;
+            U64 south = (currIndex >> 8);
+            U64 southWest = (currIndex >> 7) & ~MASK_A_FILE;
+            
+            U64 currMoveMap = northWestWest | northNorthWest | northNorthEast | northEastEast
                             | southWestWest | southSouthWest | southSouthEast | southEastEast;
             
             knightAttacks[i] = currMoveMap;
