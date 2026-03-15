@@ -9,8 +9,14 @@
 #include "types.h"
 using namespace std;
 
+// generate all pieces attack tables
 namespace {
     U64 knightAttacks[64];
+    U64 bishopAttacks[64];
+    U64 rookAttacks[64];
+    U64 queenAttacks[64];
+    U64 kingAttacks[64];
+
     // pre-compute knight moves
     // direction is based on the orientation of bitboards defined in comments in types.h
     void preComputeKnightMoves() {
@@ -31,6 +37,9 @@ namespace {
             knightAttacks[i] = currMoveMap;
         }
     }
+}
+
+namespace {
     // Pawn move functions
     void wPawnSinglePush(const Board& board, vector<Move>& moveList) {
         U64 emptySquares = ~board.occupancy[ALL];
