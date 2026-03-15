@@ -45,13 +45,8 @@ namespace {
         return currEval;
     }
 
-    int minimax(Board& board, int depth) {
+    int minimax(Board& board, int depth, int alpha, int beta) {
         bool maximizingPlayer = board.sideToMove == WHITE;
-        // check if king has been captured
-        if (!board.pieces[board.sideToMove][KING]) {
-            return maximizingPlayer ? INT_MIN : INT_MAX;
-        }
-
         // evaluate final position
         if (depth == 0) {
             return evaluate(board);
@@ -59,15 +54,31 @@ namespace {
 
         vector<Move> moves = MoveGen::generateLegalMoves(board); // generate all opponent moves
 
+        // check if game is stalemated or checkmated
+        if (moves.size() == 0) {
+            board.sideToMove = board.sideToMove == WHITE ? BLACK : WHITE;
+            // checkmated
+            if (board.isKingInCheck()) {
+                board.sideToMove = board.sideToMove == WHITE ? BLACK : WHITE;
+                return board.sideToMove == WHITE ? INT_MIN : INT_MAX;
+            }
+            // stalemated
+            board.sideToMove = board.sideToMove == WHITE ? BLACK : WHITE;
+            return 0;
+        }
+
         // if whites turn
         if (maximizingPlayer) {
             int bestEval = INT_MIN;
             for (const Move& move : moves) {
                 MoveInfo moveInfo = board.makeMove(move);
-                int currEval = minimax(board, depth - 1);
+                int currEval = minimax(board, depth - 1, alpha, beta);
                 board.unMakeMove(moveInfo);
-
                 bestEval = max(bestEval, currEval);
+                
+                // alpha-beta pruning
+                alpha = max(alpha, currEval);
+                if (beta <= alpha) break;
             }
             return bestEval;
         }
@@ -76,10 +87,13 @@ namespace {
             int bestEval = INT_MAX;
             for (const Move& move : moves) {
                 MoveInfo moveInfo = board.makeMove(move);
-                int currEval = minimax(board, depth - 1);
+                int currEval = minimax(board, depth - 1, alpha, beta);
                 board.unMakeMove(moveInfo);
-
                 bestEval = min(bestEval, currEval);
+
+                // beta pruning
+                beta = min(beta, currEval);
+                if (beta <= alpha) break;
             }
             return bestEval;
         }
@@ -95,7 +109,7 @@ namespace Engine {
         int bestEval = maximizing ? INT_MIN : INT_MAX;
         for (const Move& move : moves) {
             MoveInfo moveInfo = board.makeMove(move);
-            int currEval = minimax(board, 3);
+            int currEval = minimax(board, 4, INT_MIN, INT_MAX);
             board.unMakeMove(moveInfo);
             
             if (maximizing) {
