@@ -340,7 +340,7 @@ void Board::unMakeMove(MoveInfo moveInfo) {
 
 bool Board::isKingInCheck() {
     int kingIndex = getLSB(pieces[sideToMove == WHITE ? BLACK : WHITE][KING]);
-    vector<Move> allMoves = MoveGen::generateAllMoves(*this);
+    vector<Move> allMoves = MoveGen::generateAllMoves(sideToMove, *this);
 
     for (const Move& move : allMoves) {
         if (move.toSquare == kingIndex) return true;
@@ -349,8 +349,8 @@ bool Board::isKingInCheck() {
     return false;
 } 
 
-bool Board::isSquareAttacked(int toSquare) {
-    vector<Move> allMoves = MoveGen::generateAllMoves(*this);
+bool Board::isSquareAttacked(Color attackingPlayer, int toSquare) {
+    vector<Move> allMoves = MoveGen::generateAllMoves(attackingPlayer, *this);
 
     for (const Move& move : allMoves) {
         if (move.toSquare == toSquare) 

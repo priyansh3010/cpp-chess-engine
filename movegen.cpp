@@ -326,16 +326,16 @@ namespace {
             }
         }
     }
-    void generateSlidingMoves(const Board& board, Piece piece, const MoveGen::Direction* dirs, vector<Move>& moveList) {
-        Color enemy = board.sideToMove == WHITE ? BLACK : WHITE;
-        U64 currColorPieces = board.pieces[board.sideToMove][piece];
+    void generateSlidingMoves(const Board& board, Piece piece, const MoveGen::Direction* dirs, vector<Move>& moveList, Color currPlayer) {
+        Color enemy = currPlayer == WHITE ? BLACK : WHITE;
+        U64 currColorPieces = board.pieces[currPlayer][piece];
 
         // loop through all specified piece of the player
         while (currColorPieces) {
             int fromSquare = getLSB(currColorPieces);
 
             // get all possible attack squares of the one piece
-            U64 currAttacks = MoveGen::getRays(fromSquare, board.occupancy[board.sideToMove], board.occupancy[enemy], dirs);
+            U64 currAttacks = MoveGen::getRays(fromSquare, board.occupancy[currPlayer], board.occupancy[enemy], dirs);
 
             // go through each attack and create a move
             while (currAttacks) {
@@ -353,9 +353,9 @@ namespace {
 }
 // move generation function for each individual type of piece
 namespace {
-    void generatePawnMoves(const Board& board, vector<Move>& moveList) {
+    void generatePawnMoves(const Board& board, vector<Move>& moveList, Color currPlayer) {
 
-        if (board.sideToMove == WHITE) {
+        if (currPlayer == WHITE) {
             wPawnSinglePush(board, moveList); 
             wPawnDoublePush(board, moveList);
             wPawnCapture(board, moveList);
@@ -366,19 +366,19 @@ namespace {
             bPawnCapture(board, moveList);  
         }
     }
-    void generateKnightMoves(const Board& board, vector<Move>& moveList) {
-        U64 knights = board.pieces[board.sideToMove][KNIGHT];
+    void generateKnightMoves(const Board& board, vector<Move>& moveList, Color currPlayer) {
+        U64 knights = board.pieces[currPlayer][KNIGHT];
 
         // Go through all the players knights
         while (knights) {
             int fromSquare = getLSB(knights);
             
             // Retrieve knight attack of each player knight and make sure it cannot capture own player pieces
-            U64 knightMoves = knightAttacks[fromSquare] & ~board.occupancy[board.sideToMove];
+            U64 knightMoves = knightAttacks[fromSquare] & ~board.occupancy[currPlayer];
             // Loop through all moves retrieved and store it
             while (knightMoves) {
                 int toSquare = getLSB(knightMoves);
-                Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
+                Piece captured = board.getPieceAt(currPlayer == WHITE ? BLACK : WHITE, toSquare);
                 Move move(fromSquare, toSquare, KNIGHT, captured); // Captured == None if no enemy piece exists at toSquare
                 moveList.push_back(move);
                 knightMoves &= knightMoves - 1;
@@ -387,26 +387,26 @@ namespace {
             knights &= knights - 1;
         }
     }
-    void generateBishopMoves(const Board& board, vector<Move>& moveList) {
-        generateSlidingMoves(board, BISHOP, DIAG_DIRS, moveList);
+    void generateBishopMoves(const Board& board, vector<Move>& moveList, Color currPlayer) {
+        generateSlidingMoves(board, BISHOP, DIAG_DIRS, moveList, currPlayer);
     }
-    void generateRookMoves(const Board& board, vector<Move>& moveList) {
-        generateSlidingMoves(board, ROOK, STRAIGHT_DIRS, moveList);
+    void generateRookMoves(const Board& board, vector<Move>& moveList, Color currPlayer) {
+        generateSlidingMoves(board, ROOK, STRAIGHT_DIRS, moveList, currPlayer);
     }
-    void generateQueenMoves(const Board& board, vector<Move>& moveList) {
-        generateSlidingMoves(board, QUEEN, DIAG_DIRS, moveList);
-        generateSlidingMoves(board, QUEEN, STRAIGHT_DIRS, moveList);
+    void generateQueenMoves(const Board& board, vector<Move>& moveList, Color currPlayer) {
+        generateSlidingMoves(board, QUEEN, DIAG_DIRS, moveList, currPlayer);
+        generateSlidingMoves(board, QUEEN, STRAIGHT_DIRS, moveList, currPlayer);
     }
-    void generateKingMoves(const Board& board, vector<Move>& moveList) {
-        U64 kingMask = board.pieces[board.sideToMove][KING];
+    void generateKingMoves(const Board& board, vector<Move>& moveList, Color currPlayer) {
+        U64 kingMask = board.pieces[currPlayer][KING];
 
         int fromSquare = getLSB(kingMask);
 
         // loop through all normal king moves from curr square
-        U64 kingAttack = kingAttacks[fromSquare] & ~board.occupancy[board.sideToMove];
+        U64 kingAttack = kingAttacks[fromSquare] & ~board.occupancy[currPlayer];
         while (kingAttack) {
             int toSquare = getLSB(kingAttack);
-            Piece captured = board.getPieceAt(board.sideToMove == WHITE ? BLACK : WHITE, toSquare);
+            Piece captured = board.getPieceAt(currPlayer == WHITE ? BLACK : WHITE, toSquare);
             Move move(fromSquare, toSquare, KING, captured);
             moveList.push_back(move);    
 
@@ -416,7 +416,7 @@ namespace {
         // castling moves
 
         // white castling
-        if (board.sideToMove == WHITE) {
+        if (currPlayer == WHITE) {
             // kingside castling
             if (board.castlingRights & 0b1000) {
                 if ((~board.occupancy[ALL] & 0x0000000000000060) == 0x0000000000000060) {
@@ -477,27 +477,28 @@ namespace MoveGen {
         return attacks;
     }
 
-    vector<Move> generateAllMoves(Board& board) {
+    vector<Move> generateAllMoves(Color currPlayer, Board& board) {
         vector<Move> moveList;
         moveList.reserve(255);
-        generatePawnMoves(board, moveList);
-        generateKnightMoves(board, moveList);
-        generateBishopMoves(board, moveList);
-        generateRookMoves(board, moveList);
-        generateQueenMoves(board, moveList);
-        generateKingMoves(board, moveList);
+        generatePawnMoves(board, moveList, currPlayer);
+        generateKnightMoves(board, moveList, currPlayer);
+        generateBishopMoves(board, moveList, currPlayer);
+        generateRookMoves(board, moveList, currPlayer);
+        generateQueenMoves(board, moveList, currPlayer);
+        generateKingMoves(board, moveList, currPlayer);
 
         return moveList;
     }
 
     vector<Move> generateLegalMoves(Board& board) {
-        vector<Move> moves = generateAllMoves(board);
+        Color currPlayer = board.sideToMove;
+        vector<Move> moves = generateAllMoves(currPlayer, board);
         int kingIndex = getLSB(board.pieces[board.sideToMove][KING]);
-        board.sideToMove = board.sideToMove == WHITE ? BLACK : WHITE;
-        
+        Color enemyColor = currPlayer == WHITE ? BLACK : WHITE;
+
+        // check if king is currently in check
         bool canCastle = true;
-        if (board.isSquareAttacked(kingIndex)) canCastle = false;
-        board.sideToMove = board.sideToMove == WHITE ? BLACK : WHITE;
+        if (board.isSquareAttacked(enemyColor, kingIndex)) canCastle = false;
         
         vector<Move> legalMoves;
         legalMoves.reserve(moves.size());
@@ -507,10 +508,10 @@ namespace MoveGen {
                 if (move.isCastle && canCastle) {
                     bool passesThroughCheck;
                     if (move.fromSquare < move.toSquare) {
-                        passesThroughCheck = board.isSquareAttacked(move.toSquare - 1);
+                        passesThroughCheck = board.isSquareAttacked(enemyColor, move.toSquare - 1);
                     }
                     else {
-                        passesThroughCheck = board.isSquareAttacked(move.toSquare + 1);
+                        passesThroughCheck = board.isSquareAttacked(enemyColor, move.toSquare + 1);
                     }
                     if (!board.isKingInCheck() && !passesThroughCheck) {
                         legalMoves.push_back(move);
