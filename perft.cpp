@@ -10,30 +10,33 @@
 using namespace std;
 
 
-U64 perft(Board& board, int depth) {
+U64 perft(Board& board, int depth, Move* movePool) {
     if (depth == 0) return 1;
-
-    std::vector<Move> moves = MoveGen::generateLegalMoves(board);
-
+    
+    Move* moves = movePool + (depth * 256);
+    int moveCount = 0;
+    MoveGen::generateLegalMoves(board, moves, moveCount);
+    
     U64 nodes = 0;
-    for (const Move& move : moves) {
+    for (int i = 0; i < moveCount; i++) {
+        Move& move = moves[i];
         MoveInfo moveInfo = board.makeMove(move);
-        nodes += perft(board, depth - 1);
+        nodes += perft(board, depth - 1, movePool);
         board.unMakeMove(moveInfo);
     }
     return nodes;
 }
 
-int perftDivide(Board& board, int depth) {
-    vector<Move> moves = MoveGen::generateLegalMoves(board);
+int perftDivide(Board& board, int depth, Move* movePool) {
+    Move* moves = movePool + (depth * 256);
+    int moveCount = 0;
+    MoveGen::generateLegalMoves(board, moves, moveCount);
     
-    char files[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
-    int ranks[] = {1, 2, 3, 4, 5, 6, 7, 8};
-
     uint64_t total = 0;
-    for (auto& move : moves) {
+    for (int i = 0; i < moveCount; i++) {
+        Move& move = moves[i];
         MoveInfo moveInfo = board.makeMove(move);
-        uint64_t count = perft(board, depth - 1); 
+        uint64_t count = perft(board, depth - 1, movePool);
         board.unMakeMove(moveInfo);
 
         cout << utils::moveToString(move);
