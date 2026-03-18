@@ -21,6 +21,6 @@ struct Board {
     Piece getPieceAt(Color color, int square) const;
     MoveInfo makeMove(Move move);
     void unMakeMove(MoveInfo moveInfo);
-    bool isKingInCheck();
-    bool isSquareAttacked(int toSquare);
+    bool isKingInCheck(Color kingColor);
+    bool isSquareAttacked(Color currPlayer, int toSquare);
 };

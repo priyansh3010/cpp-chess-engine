@@ -7,8 +7,11 @@
 using namespace std;
 
 namespace MoveGen {
+    extern U64 knightAttacks[64];
+    extern U64 kingAttacks[64];
 
     void init();
-    vector<Move> generateAllMoves(Board& board);
-    vector<Move> generateLegalMoves(Board& board);
+    U64 getRays(int fromSquare, U64 currPlayerPieces, U64 opponentPieces, const Direction* dirs);
+    void generateAllMoves(Color currPlayer, Move* moveList, int& moveCount, Board& board);
+    void generateLegalMoves(Board& board, Move* legalMoves, int& legalMovesCount);
 }

@@ -51,7 +51,6 @@ namespace {
             while (ss >> token) {
                 Move move = utils::stringToMove(UCI::board, token);
                 UCI::board.makeMove(move);
-
             }
         }
     }

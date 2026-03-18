@@ -30,11 +30,11 @@ Move utils::stringToMove(Board& board, string moveStr) {
     // parse squares
     int fromFile = moveStr[0] - 'a';
     int fromRank = moveStr[1] - '1';
-    int toFile   = moveStr[2] - 'a';
-    int toRank   = moveStr[3] - '1';
+    int toFile = moveStr[2] - 'a';
+    int toRank = moveStr[3] - '1';
 
     Square from = (Square)(fromRank * 8 + fromFile);
-    Square to   = (Square)(toRank * 8 + toFile);
+    Square to = (Square)(toRank * 8 + toFile);
 
     // check for promotion piece (5th char)
     Piece promoPiece = Piece::NONE;
@@ -48,13 +48,16 @@ Move utils::stringToMove(Board& board, string moveStr) {
     }
 
     // match against generated moves
-    vector<Move> moves = MoveGen::generateLegalMoves(board);
-    for (Move& move : moves) {
+    Move moves[256];
+    int moveCount = 0;
+    MoveGen::generateAllMoves(board.sideToMove, moves, moveCount, board);
+    for (int i = 0; i < moveCount; i++) {
+        Move& move = moves[i];
         if (move.fromSquare == from && move.toSquare == to) {
             if (promoPiece == Piece::NONE || move.promotionPiece == promoPiece)
                 return move;
         }
     }
 
-    return Move{0, 0, NONE}; // null move if not found
+    return Move{}; // null move if not found
 }

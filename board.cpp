@@ -253,6 +253,27 @@ MoveInfo Board::makeMove(Move move) {
         // removes captured piece from appropriate bitboard
         if (move.capturedPiece != NONE) {
             pieces[sideToMove == WHITE ? BLACK : WHITE][move.capturedPiece] ^= (1ULL << move.toSquare);
+            halfMoveClock = 0;
+
+            // update castling rights if captured piece was rook
+            if (move.capturedPiece == ROOK) {
+                if (sideToMove == BLACK) {
+                    if (move.toSquare == 0) {
+                        if (castlingRights & 0b0100) castlingRights ^= 0b0100;
+                    }
+                    else if (move.toSquare == 7) {
+                        if (castlingRights & 0b1000) castlingRights ^= 0b1000;
+                    }
+                }
+                else {
+                    if (move.toSquare == 56) {
+                        if (castlingRights & 0b0001) castlingRights ^= 0b0001;
+                    }
+                    else if (move.toSquare == 63) {
+                        if (castlingRights & 0b0010) castlingRights ^= 0b0010;
+                    }
+                }
+            }
         }
     }
     // castling moves
@@ -338,24 +359,31 @@ void Board::unMakeMove(MoveInfo moveInfo) {
     updateOccupancyBoards(*this);
 }
 
-bool Board::isKingInCheck() {
-    int kingIndex = getLSB(pieces[sideToMove == WHITE ? BLACK : WHITE][KING]);
-    vector<Move> allMoves = MoveGen::generateAllMoves(*this);
-
-    for (const Move& move : allMoves) {
-        if (move.toSquare == kingIndex) return true;
-    }
-
-    return false;
+bool Board::isKingInCheck(Color kingColor) {
+    int kingIndex = getLSB(pieces[kingColor][KING]);
+    return isSquareAttacked(kingColor == WHITE ? BLACK : WHITE, kingIndex);
 } 
 
-bool Board::isSquareAttacked(int toSquare) {
-    vector<Move> allMoves = MoveGen::generateAllMoves(*this);
-
-    for (const Move& move : allMoves) {
-        if (move.toSquare == toSquare) 
-            return true;
+bool Board::isSquareAttacked(Color attackingPlayer, int toSquare) {
+    Color currColor = attackingPlayer == WHITE ? BLACK : WHITE;
+    // Knights
+    if (MoveGen::knightAttacks[toSquare] & pieces[attackingPlayer][KNIGHT]) return true;
+    // Kings
+    if (MoveGen::kingAttacks[toSquare] & pieces[attackingPlayer][KING]) return true;
+    // Pawns
+    U64 sqMask = 1ULL << toSquare;
+    if (attackingPlayer == WHITE) {
+        U64 pawnAttacks = ((sqMask >> 7) & ~MASK_A_FILE) | ((sqMask >> 9) & ~MASK_H_FILE);
+        if (pawnAttacks & pieces[attackingPlayer][PAWN]) return true;
+    } else {
+        U64 pawnAttacks = ((sqMask << 7) & ~MASK_H_FILE) | ((sqMask << 9) & ~MASK_A_FILE);
+        if (pawnAttacks & pieces[attackingPlayer][PAWN]) return true;
     }
-
+    // Bishops + Queens
+    if (MoveGen::getRays(toSquare, occupancy[currColor], occupancy[attackingPlayer], DIAG_DIRS) &
+       (pieces[attackingPlayer][BISHOP] | pieces[attackingPlayer][QUEEN])) return true;
+    // Rooks + Queens
+    if (MoveGen::getRays(toSquare, occupancy[currColor], occupancy[attackingPlayer], STRAIGHT_DIRS) &
+       (pieces[attackingPlayer][ROOK] | pieces[attackingPlayer][QUEEN])) return true;
     return false;
 }
