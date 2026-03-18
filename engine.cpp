@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -7,9 +8,17 @@
 #include "moveinfo.h"
 #include "movegen.h"
 #include "types.h"
+#include "utils.h"
+using namespace std;
 
-const int MAX_DEPTH = 5;
+const int MAX_DEPTH = 10;
 Move movePool[256 * (MAX_DEPTH)]; // +1 for the getBestMove level
+
+// for time management
+auto searchStartTime = chrono::steady_clock::now();
+int searchAllocatedMs = 5000;
+bool stopSearch = false;
+int nodesSearched = 0;
 
 namespace {
     int evaluate(Board& board) {
@@ -49,8 +58,17 @@ namespace {
         return currEval;
     }
 
-    int minimax(Board& board, int depth, int alpha, int beta, Move* movePool, int plyFromRoot) {
+    int minimax(Board& board, int depth, int alpha, int beta, Move* movePool, int plyFromRoot, int& nodesSearched) {
         bool maximizingPlayer = board.sideToMove == WHITE;
+        // check if search time is over
+        if ((nodesSearched & 2047) == 0 && utils::isTimeUp(searchAllocatedMs, searchStartTime)) stopSearch = true;
+
+        // terminate minimax if search over
+        if (stopSearch) return 0;
+        
+        // increment nodesSearched
+        nodesSearched++;
+
         // evaluate final position
         if (depth == 0) return evaluate(board);
 
@@ -74,7 +92,7 @@ namespace {
             for (int i = 0; i < moveCount; i++) {
                 Move& move = moves[i];
                 MoveInfo moveInfo = board.makeMove(move);
-                int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1);
+                int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
                 bestEval = max(bestEval, currEval);
                 
@@ -90,7 +108,7 @@ namespace {
             for (int i = 0; i < moveCount; i++) {
                 Move& move = moves[i];
                 MoveInfo moveInfo = board.makeMove(move);
-                int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1);
+                int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
                 bestEval = min(bestEval, currEval);
 
@@ -101,21 +119,17 @@ namespace {
             return bestEval;
         }
     }
-}
 
-namespace Engine {
-    Move getBestMove(Board& board) {
-        Move* moves = movePool;
-        int moveCount = 0;
-        MoveGen::generateLegalMoves(board, moves, moveCount);
+    Move searchRoot(Board& board, int depth, Move* moves, int& moveCount) {
         bool maximizing = board.sideToMove == WHITE;
         
+        int nodesSearched = 0;
         Move bestMove = moves[0];
         int bestEval = maximizing ? INT_MIN : INT_MAX;
         for (int i = 0; i < moveCount; i++) {
             Move& move = moves[i];
             MoveInfo moveInfo = board.makeMove(move);
-            int currEval = minimax(board, 4, INT_MIN, INT_MAX, movePool, 1);
+            int currEval = minimax(board, depth - 1, INT_MIN, INT_MAX, movePool, 1, nodesSearched);
             board.unMakeMove(moveInfo);
             
             if (maximizing) {
@@ -132,6 +146,31 @@ namespace Engine {
             }
         }
         
+        return bestMove;
+    }
+}
+
+namespace Engine {
+    Move getBestMove(Board& board) {
+        Move* moves = movePool;
+        int moveCount = 0;
+        MoveGen::generateLegalMoves(board, moves, moveCount);
+
+        searchStartTime = chrono::steady_clock::now();
+        searchAllocatedMs = 5000;
+        stopSearch = false;
+        nodesSearched = 0;
+
+        Move bestMove = moveCount != 0 ? moves[0] : Move{};
+
+        for (int depth = 1; depth <= MAX_DEPTH; depth++) {
+            Move candidateMove = searchRoot(board, depth, moves, moveCount);
+
+            if (stopSearch) break;
+
+            bestMove = candidateMove;
+        }
+
         return bestMove;
     }
 }
