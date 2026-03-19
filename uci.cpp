@@ -36,18 +36,17 @@ namespace {
         ss >> token; // "startpos" or "fen"
         if (token == "startpos") {
             UCI::init();
+            ss >> token; // consume "moves"
         } else if (token == "fen") {
             string fen;
             while (ss >> token && token != "moves") {
                 fen += token + " ";
             }
             UCI::board.init(fen);
+            // token is already "moves" here, don't read again
         }
-        
-        // if token is now "moves", replay them
-        ss >> token; // "startpos" or "fen"
+
         if (token == "moves") {
-            string lastMove = "";
             while (ss >> token) {
                 Move move = utils::stringToMove(UCI::board, token);
                 UCI::board.makeMove(move);
