@@ -50,3 +50,15 @@ inline const Direction STRAIGHT_DIRS[4] = {
     { +1, ~MASK_A_FILE }, // west
     { -1, ~MASK_H_FILE }  // east
 };
+
+// defines white and black squares for insufficient material detection function
+inline const bool IS_WHITE[64] = {
+    0,1,0,1,0,1,0,1,
+    1,0,1,0,1,0,1,0,
+    0,1,0,1,0,1,0,1,
+    1,0,1,0,1,0,1,0,
+    0,1,0,1,0,1,0,1,
+    1,0,1,0,1,0,1,0,
+    0,1,0,1,0,1,0,1,
+    1,0,1,0,1,0,1,0
+};
