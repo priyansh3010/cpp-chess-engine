@@ -33,7 +33,7 @@ namespace {
     U64 zobristEnPassant[8];
 
     void initZobrist() {
-        std::mt19937_64 rng(1234567891011ULL); // any fixed seed
+        std::mt19937_64 rng(301005); // any fixed seed
         std::uniform_int_distribution<uint64_t> dist;
 
         for (int c = 0; c < 2; c++)
@@ -137,10 +137,10 @@ void Board::loadFEN(string FEN) {
     // sets castling
     castlingRights = 0b0000;
     for (char c : tokens[2]) {
-        if (c == 'Q') castlingRights ^= 0b1000;
-        else if (c == 'K') castlingRights ^= 0b0100;
-        else if (c == 'q') castlingRights ^= 0b0010;
-        else if (c == 'k') castlingRights ^= 0b0001;
+        if (c == 'K') castlingRights ^= 0b1000;
+        else if (c == 'Q') castlingRights ^= 0b0100;
+        else if (c == 'k') castlingRights ^= 0b0010;
+        else if (c == 'q') castlingRights ^= 0b0001;
     }
 
     // sets en-passant square
@@ -425,7 +425,11 @@ void Board::unMakeMove(MoveInfo moveInfo) {
     updateOccupancyBoards(*this);
 
     // revert hash back to before this move
-    hash = hashHistory[--historyPly];
+    if (historyPly - 2 >= 0) {
+        hash = hashHistory[historyPly - 2];
+        historyPly--;    
+    }
+    else hash = 0; // first move (initial hash)
 }
 
 bool Board::isKingInCheck(Color kingColor) {
