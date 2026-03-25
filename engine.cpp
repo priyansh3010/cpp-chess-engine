@@ -12,7 +12,6 @@
 #include "utils.h"
 using namespace std;
 
-const int INF = 1000000;
 const int MAX_DEPTH = 20;
 Move movePool[256 * (MAX_DEPTH)]; // +1 for the getBestMove level
 
@@ -30,18 +29,18 @@ namespace {
         500, // rook
         300, // bishop
         300, // knight
-        100, // pawn
+        100 // pawn
     };
 
     int scoreMVVLVA(const Move& move) {
-        return mvvLvaValues[move.capturedPiece] - mvvLvaValues[move.pieceType];
+        return mvvLvaValues[move.capturedPiece] - mvvLvaValues[move.pieceType] + 10000;
     }
 
-    void orderMoves(Move* moves, int moveCount, int bestMoveIdx = -1) {
+    void orderMoves(Move* moves, int& moveCount, Move bestMove = Move()) {
         // assign scores
         static int scores[256];
         for (int i = 0; i < moveCount; i++) {
-            if (i == bestMoveIdx) {
+            if (moves[i] == bestMove) {
                 scores[i] = 100000; // always search best move first
             } 
             else if (moves[i].capturedPiece != NONE) {
@@ -67,6 +66,22 @@ namespace {
     }
 }
 
+// 3-fold repetiion check
+namespace {
+    bool is3FoldRepetition(Board& board) {
+        int count = 0;
+        for (int i = board.historyPly - 2; i >= 0; i--) {
+            if (board.hash == board.hashHistory[i]) count++;
+            if (count == 2) {
+                return true; 
+            }
+        }
+
+        return false;
+    }
+}
+
+// search namespace
 namespace {
     int minimax(Board& board, int depth, int alpha, int beta, Move* movePool, int plyFromRoot, int& nodesSearched) {
         
@@ -91,7 +106,7 @@ namespace {
         if (moveCount == 0) {
             // checkmated
             if (board.isKingInCheck(board.sideToMove)) {
-                return board.sideToMove == WHITE ? -INF - plyFromRoot : INF + plyFromRoot;
+                return board.sideToMove == WHITE ? -INF + plyFromRoot : INF - plyFromRoot;
             }
             // stalemated
             return 0;
@@ -112,6 +127,13 @@ namespace {
             for (int i = 0; i < moveCount; i++) {
                 Move& move = moves[i];
                 MoveInfo moveInfo = board.makeMove(move);
+                
+                // check for 3=fold repetition
+                if (is3FoldRepetition(board)) {
+                    board.unMakeMove(moveInfo);
+                    return 0;
+                }
+
                 int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
                 bestEval = max(bestEval, currEval);
@@ -128,6 +150,13 @@ namespace {
             for (int i = 0; i < moveCount; i++) {
                 Move& move = moves[i];
                 MoveInfo moveInfo = board.makeMove(move);
+
+                // check for 3=fold repetition
+                if (is3FoldRepetition(board)) {
+                    board.unMakeMove(moveInfo);
+                    return 0;
+                }
+
                 int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
                 bestEval = min(bestEval, currEval);
@@ -140,31 +169,40 @@ namespace {
         }
     }
 
-    int searchRoot(Board& board, int depth, Move* moves, int& moveCount, int& nodesSearched, int bestMove = -1) {
+    Move searchRoot(Board& board, int depth, Move* moves, int& moveCount, int& nodesSearched, Move bestMove = Move()) {
         bool maximizing = board.sideToMove == WHITE;
 
         int bestEval = maximizing ? -INF : INF;
         
         // move ordering
-        orderMoves(moves, moveCount);
+        orderMoves(moves, moveCount, bestMove);
         
-        // start from best move (if present)
+        // loop through all moves
         for (int i = 0; i < moveCount; i++) {
             Move& move = moves[i];
             MoveInfo moveInfo = board.makeMove(move);
-            int currEval = minimax(board, depth - 1, -INF, INF, movePool, 1, nodesSearched);
-            board.unMakeMove(moveInfo);
+            
+            int currEval;
+            // check for 3=fold repetition
+            if (is3FoldRepetition(board)) {
+                board.unMakeMove(moveInfo);
+                currEval = 0;
+            }
+            else {
+                currEval = minimax(board, depth - 1, -INF, INF, movePool, 1, nodesSearched);
+                board.unMakeMove(moveInfo);
+            }
 
             if (maximizing) {
                 if (bestEval < currEval) {
                     bestEval = currEval;
-                    bestMove = i;
+                    bestMove = move;
                 } 
             }
             else {
                 if (bestEval > currEval) {
                     bestEval = currEval;
-                    bestMove = i;
+                    bestMove = move;
                 }     
             }
         }
@@ -186,11 +224,11 @@ namespace Engine {
         stopSearch = false;
         nodesSearched = 0;
 
+        Move bestMove = moves[0];
         // iterative deepening
-        int bestMove = 0;
         int maxDepthReached = 1;
         for (int depth = 1; depth <= MAX_DEPTH; depth++) {
-            int candidateMove;
+            Move candidateMove;
             if (depth == 1) candidateMove = searchRoot(board, depth, moves, moveCount, nodesSearched); 
             else candidateMove = searchRoot(board, depth, moves, moveCount, nodesSearched, bestMove); 
             
@@ -204,6 +242,6 @@ namespace Engine {
         
         // pass extra info for engine stats
         cout << "info depth " << maxDepthReached << " score cp " << Evaluation::evaluate(board) << " nodes " << nodesSearched << endl;
-        return moves[bestMove];
+        return bestMove;
     }
 }
