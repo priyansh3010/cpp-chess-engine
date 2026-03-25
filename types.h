@@ -62,3 +62,6 @@ inline const bool IS_WHITE[64] = {
     0,1,0,1,0,1,0,1,
     1,0,1,0,1,0,1,0
 };
+
+// set a large value for evaluation to start from
+const int INF = 1000000;
