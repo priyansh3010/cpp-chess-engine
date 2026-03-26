@@ -14,6 +14,7 @@ const int MAX_PHASE = 24;
 
 // PST calculation namespace
 namespace {
+    // PSTs from https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function
     constexpr int middlegamePST[6][64] = {
         // king
         {
@@ -82,7 +83,6 @@ namespace {
             0,   0,   0,   0,   0,   0,  0,   0,
         }
     };
-
     constexpr int endgamePST[6][64] = {
         // king
         {
