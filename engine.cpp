@@ -13,7 +13,8 @@
 using namespace std;
 
 const int MAX_DEPTH = 20;
-Move movePool[256 * (MAX_DEPTH)]; // +1 for the getBestMove level
+const int MAX_PLY = 128;
+Move movePool[256 * MAX_PLY];
 
 // for time management
 auto searchStartTime = chrono::steady_clock::now();
@@ -83,6 +84,88 @@ namespace {
 
 // search namespace
 namespace {
+    int quiscenceSearch(Board& board, int alpha, int beta, Move* movePool, int plyFromRoot, int& nodesSearched) {
+        // check if search time is over
+        if ((nodesSearched & 2047) == 0 && utils::isTimeUp(searchAllocatedMs, searchStartTime)) stopSearch = true;
+
+        // terminate minimax if search over
+        if (stopSearch) return 0;
+
+        int static_eval = Evaluation::evaluate(board); // already from white's perspective
+        nodesSearched++;
+
+        int best_value = static_eval;
+        if (board.sideToMove == WHITE) {
+            if (best_value >= beta) return best_value;
+            if (best_value > alpha) alpha = best_value;
+
+            Move* moves = movePool + (plyFromRoot * 256);
+            int moveCount = 0;
+            MoveGen::generateLegalMoves(board, moves, moveCount); // generate legal opponent moves
+
+            // check if game is stalemated or checkmated
+            if (moveCount == 0) {
+                // checkmated
+                if (board.isKingInCheck(board.sideToMove)) {
+                    return board.sideToMove == WHITE ? -INF + plyFromRoot : INF - plyFromRoot;
+                }
+                // stalemated
+                return 0;
+            }
+            
+            // order moves
+            orderMoves(moves, moveCount);
+            
+            for (int i = 0; i < moveCount; i++) {
+                if (moves[i].capturedPiece == NONE) break;
+
+                MoveInfo moveInfo = board.makeMove(moves[i]);
+                int score = quiscenceSearch(board, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
+                board.unMakeMove(moveInfo);
+                
+                if (score >= beta) return score;
+                if (score > best_value) best_value = score;
+                if (score > alpha) alpha = score;
+            }
+        }
+        else {
+            // mirror logic, but flipped for black
+            if (best_value <= alpha) return best_value;
+            if (best_value < beta) beta = best_value;
+            
+            Move* moves = movePool + (plyFromRoot * 256);
+            int moveCount = 0;
+            MoveGen::generateLegalMoves(board, moves, moveCount); // generate legal opponent moves
+
+            // check if game is stalemated or checkmated
+            if (moveCount == 0) {
+                // checkmated
+                if (board.isKingInCheck(board.sideToMove)) {
+                    return board.sideToMove == WHITE ? -INF + plyFromRoot : INF - plyFromRoot;
+                }
+                // stalemated
+                return 0;
+            }
+            
+            // order moves
+            orderMoves(moves, moveCount);
+            
+            for (int i = 0; i < moveCount; i++) {
+                if (moves[i].capturedPiece == NONE) break;
+
+                MoveInfo moveInfo = board.makeMove(moves[i]);
+                int score = quiscenceSearch(board, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
+                board.unMakeMove(moveInfo);
+
+                if (score <= alpha) return score;
+                if (score < best_value) best_value = score;
+                if (score < beta) beta = score;
+            }
+        }
+
+        return best_value;
+    }
+
     int minimax(Board& board, int depth, int alpha, int beta, Move* movePool, int plyFromRoot, int& nodesSearched) {
         
         bool maximizingPlayer = board.sideToMove == WHITE;
@@ -96,7 +179,8 @@ namespace {
         nodesSearched++;
 
         // evaluate final position
-        if (depth == 0) return Evaluation::evaluate(board);
+        if (depth == 0) 
+            return quiscenceSearch(board, alpha, beta, movePool, plyFromRoot, nodesSearched);
 
         Move* moves = movePool + (plyFromRoot * 256);
         int moveCount = 0;
