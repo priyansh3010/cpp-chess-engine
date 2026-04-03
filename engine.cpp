@@ -16,13 +16,16 @@ const int MAX_DEPTH = 20;
 const int MAX_PLY = 128;
 Move movePool[256 * MAX_PLY];
 
-const int NODES_BEFORE_CHECKING_TIME = 2047;
 
 // for time management
+const int NODES_BEFORE_CHECKING_TIME = 2047;
 auto searchStartTime = chrono::steady_clock::now();
 int searchAllocatedMs = 5000;
 bool stopSearch = false;
 int nodesSearched = 0;
+
+// quinscence search variables
+const int DELTA_MARGIN = 200;
 
 // move ordering namespace
 namespace {
@@ -35,24 +38,35 @@ namespace {
         100 // pawn
     };
 
+    Move killerMoves[2][MAX_PLY];
+
     int scoreMVVLVA(const Move& move) {
         return pieceValues[move.capturedPiece] - pieceValues[move.pieceType] + 10000;
     }
 
-    void orderMoves(Move* moves, int& moveCount, Move bestMove = Move()) {
+    void orderMoves(Move* moves, int& moveCount, int currPly, Move bestMove = Move()) {
         // assign scores
         static int scores[256];
         for (int i = 0; i < moveCount; i++) {
             if (moves[i] == bestMove) {
-                scores[i] = 100000; // always search best move first
+                scores[i] = INF; // always search best move first
             } 
             else if (moves[i].capturedPiece != NONE) {
                 scores[i] = scoreMVVLVA(moves[i]);
-            } 
+            }
+            /*
+            else if (moves[i] == killerMoves[0][currPly]) {
+                scores[i] = -1000;
+            }
+            else if (moves[i] == killerMoves[1][currPly]) {
+                scores[i] = -2000;
+            }
+            */
             else {
-                scores[i] = 0;
+                scores[i] = -INF;
             }
         }
+
         // simple insertion sort
         for (int i = 1; i < moveCount; i++) {
             int key = scores[i];
@@ -106,9 +120,14 @@ namespace {
             MoveGen::generateLegalMoves(board, moves, moveCount, true); // generate legal captures only
             
             // order moves
-            orderMoves(moves, moveCount);
+            orderMoves(moves, moveCount, plyFromRoot);
             
             for (int i = 0; i < moveCount; i++) {
+                if (moves[i].promotionPiece == NONE) {
+                    int capturedValue = pieceValues[moves[i].capturedPiece];
+                    if (static_eval + capturedValue + DELTA_MARGIN < alpha) continue;
+                }
+
                 MoveInfo moveInfo = board.makeMove(moves[i]);
                 int score = quiscenceSearch(board, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
@@ -128,9 +147,14 @@ namespace {
             MoveGen::generateLegalMoves(board, moves, moveCount, true); // generate legal captures only
 
             // order moves
-            orderMoves(moves, moveCount);
+            orderMoves(moves, moveCount, plyFromRoot);
             
             for (int i = 0; i < moveCount; i++) {
+                if (moves[i].promotionPiece == NONE) {
+                    int capturedValue = pieceValues[moves[i].capturedPiece];
+                    if (static_eval - capturedValue - DELTA_MARGIN > beta) continue;
+                }
+
                 MoveInfo moveInfo = board.makeMove(moves[i]);
                 int score = quiscenceSearch(board, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
@@ -181,7 +205,7 @@ namespace {
         if (board.isInsufficientMaterial()) return 0;
 
         // move ordering
-        orderMoves(moves, moveCount);
+        orderMoves(moves, moveCount, plyFromRoot);
 
         // if whites turn
         if (maximizingPlayer) {
@@ -198,6 +222,17 @@ namespace {
 
                 int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
+
+                /*
+                // update killer moves
+                if (currEval >= beta) {
+                    killerMoves[1][plyFromRoot] = killerMoves[0][plyFromRoot];
+                    killerMoves[0][plyFromRoot] = move;
+                    
+                    return currEval;
+                }
+                */
+
                 bestEval = max(bestEval, currEval);
                 
                 // alpha-beta pruning
@@ -219,8 +254,22 @@ namespace {
                     return 0;
                 }
 
+                // recursively call minimax
                 int currEval = minimax(board, depth - 1, alpha, beta, movePool, plyFromRoot + 1, nodesSearched);
                 board.unMakeMove(moveInfo);
+
+                /*
+                // update killer moves
+                if (currEval <= alpha) {
+                    if (move.capturedPiece == NONE && move.promotionPiece == NONE) {
+                        killerMoves[1][plyFromRoot] = killerMoves[0][plyFromRoot];
+                        killerMoves[0][plyFromRoot] = move;
+                    }
+                    
+                    return currEval;
+                }
+                */
+
                 bestEval = min(bestEval, currEval);
 
                 // beta pruning
@@ -237,7 +286,7 @@ namespace {
         int bestEval = maximizing ? -INF : INF;
         
         // move ordering
-        orderMoves(moves, moveCount, bestMove);
+        orderMoves(moves, moveCount, 0, bestMove);
         
         // loop through all moves
         for (int i = 0; i < moveCount; i++) {
