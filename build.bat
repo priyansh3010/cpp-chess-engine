@@ -1,0 +1,1 @@
+cl main.cpp board.cpp movegen.cpp perft.cpp uci.cpp utils.cpp engine.cpp evaluation.cpp /EHsc /std:c++20 /O2 /GL /Oi /Fe:engine.exe
