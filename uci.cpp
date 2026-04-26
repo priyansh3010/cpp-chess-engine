@@ -17,7 +17,6 @@ namespace {
         cout << "id name pribot" << endl;
         cout << "id name pri3010" << endl;
         cout << "uciok" << endl;
-
     }
     
     void handleIsReady() {
