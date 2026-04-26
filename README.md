@@ -63,6 +63,7 @@ chess-engine/
 │   ├── uci.cpp/.h          # UCI protocol handler — parses position, go, ucinewgame, etc.
 │   └── utils.cpp/.h        # Shared helpers — string to move and vice versa parsing
 └── README.md
+└── build.bat
 ```
 
 ---
